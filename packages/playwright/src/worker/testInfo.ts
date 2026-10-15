@@ -17,6 +17,7 @@
 import fs from 'fs';
 import path from 'path';
 
+import { calculateSha1 } from '@utils/crypto';
 import { ManualPromise } from '@isomorphic/manualPromise';
 import { captureRawStack, stringifyStackFrames, filteredStackTrace } from '@utils/stackTrace';
 import { escapeWithQuotes } from '@isomorphic/stringUtils';
@@ -208,7 +209,10 @@ export class TestInfoImpl implements TestInfo {
       const sanitizedRelativePath = relativeTestFilePath.replace(process.platform === 'win32' ? new RegExp('\\\\', 'g') : new RegExp('/', 'g'), '-');
       const fullTitleWithoutSpec = this.titlePath.slice(1).join(' ');
 
-      let testOutputDir = trimLongString(sanitizedRelativePath + '-' + sanitizeForFilePath(fullTitleWithoutSpec), windowsFilesystemFriendlyLength);
+      // Include a short digest of the original title so punctuation-only differences
+      // cannot make distinct tests share (and delete) each other's artifacts.
+      const titleHash = calculateSha1(fullTitleWithoutSpec).slice(0, 8);
+      let testOutputDir = trimLongString(sanitizedRelativePath + '-' + sanitizeForFilePath(fullTitleWithoutSpec), windowsFilesystemFriendlyLength - titleHash.length - 1) + '-' + titleHash;
       if (projectInternal.id)
         testOutputDir += '-' + sanitizeForFilePath(projectInternal.id);
       if (this.retry)
