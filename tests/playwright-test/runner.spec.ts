@@ -18,6 +18,23 @@ import fs from 'fs';
 import path from 'path';
 import { test, expect, parseTestRunnerOutput, countTimes } from './playwright-test-fixtures';
 
+test('test output directories differ for titles that sanitize to the same name', async ({ runInlineTest }) => {
+  const result = await runInlineTest({
+    'tests/example.spec.js': \`
+      import fs from 'fs';
+      import { test, expect } from '@playwright/test';
+      test('hello?', async ({}, testInfo) => {
+        fs.writeFileSync(testInfo.outputPath('marker.txt'), 'question');
+      });
+      test('hello!', async ({}, testInfo) => {
+        fs.writeFileSync(testInfo.outputPath('marker.txt'), 'exclamation');
+      });
+    \`,
+  }, { workers: 1 });
+  expect(result.exitCode).toBe(0);
+  expect(result.passed).toBe(2);
+});
+
 test('it should not allow multiple tests with the same name per suite', async ({ runInlineTest }) => {
   const result = await runInlineTest({
     'tests/example.spec.js': `
